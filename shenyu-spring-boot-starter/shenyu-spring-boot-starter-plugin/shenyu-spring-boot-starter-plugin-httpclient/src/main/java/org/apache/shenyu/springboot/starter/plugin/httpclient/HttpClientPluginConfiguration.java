@@ -28,6 +28,7 @@ import org.apache.shenyu.plugin.api.ShenyuPlugin;
 import org.apache.shenyu.plugin.httpclient.NettyHttpClientPlugin;
 import org.apache.shenyu.plugin.httpclient.WebClientPlugin;
 import org.apache.shenyu.plugin.httpclient.config.HttpClientProperties;
+import org.apache.shenyu.plugin.httpclient.metrics.ShenyuHttpClientHttpClientMetricsRecorder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -119,7 +120,8 @@ public class HttpClientPluginConfiguration {
         }
         // set to false, fix java.io.IOException: Connection reset by peer
         // see https://github.com/reactor/reactor-netty/issues/388
-        return httpClient.keepAlive(properties.isKeepAlive());
+        return httpClient.keepAlive(properties.isKeepAlive())
+                .metrics(true, ShenyuHttpClientHttpClientMetricsRecorder::new);
     }
 
     /**
