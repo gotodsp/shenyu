@@ -19,7 +19,7 @@ server:
 
 spring:
   profiles:
-    active: h2
+    active: mysql
   thymeleaf:
     cache: true
     encoding: utf-8
@@ -118,6 +118,7 @@ shenyu:
       - /swagger-resources/**
       - /v2/api-docs
       - /csrf
+      - /health
   swagger:
     enable: true
   dashboard:
