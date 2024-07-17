@@ -51,6 +51,15 @@ public final class DefaultPathConstants implements Constants {
      */
     public static final String META_DATA = PRE_FIX + "/metaData";
 
+    /**
+     * The constant PROXY_SELECTOR.
+     */
+    public static final String PROXY_SELECTOR = PRE_FIX + "/proxySelectorData";
+
+    /**
+     * The constant DISCOVERY_UPSTREAM.
+     */
+    public static final String DISCOVERY_UPSTREAM = PRE_FIX + "/discoveryUpstream";
 
     /**
      * acquire app_auth_path.
@@ -69,7 +78,8 @@ public final class DefaultPathConstants implements Constants {
      * @return the string
      */
     public static String buildMetaDataPath(final String path) {
-        return String.join(PATH_SEPARATOR, META_DATA, path);
+        String join = String.join(PATH_SEPARATOR, META_DATA, path);
+        return join.replaceAll("//", PATH_SEPARATOR);
     }
 
     /**
@@ -132,6 +142,28 @@ public final class DefaultPathConstants implements Constants {
      */
     public static String buildRulePath(final String pluginName, final String selectorId, final String ruleId) {
         return String.join(PATH_SEPARATOR, buildRuleParentPath(pluginName), String.join(SELECTOR_JOIN_RULE, selectorId, ruleId));
+    }
+
+    /**
+     * buildProxySelector.
+     *
+     * @param pluginName        pluginName
+     * @param proxySelectorName selectorId
+     * @return /shenyu/proxySelectorData/pluginName/proxySelectorName
+     */
+    public static String buildProxySelectorPath(final String pluginName, final String proxySelectorName) {
+        return String.join(PATH_SEPARATOR, PROXY_SELECTOR, pluginName, proxySelectorName);
+    }
+
+    /**
+     * buildDiscoveryUpstreamPath.
+     *
+     * @param pluginName        pluginName
+     * @param proxySelectorName selectorId
+     * @return /shenyu/discoveryUpstream/pluginName/proxySelectorName
+     */
+    public static String buildDiscoveryUpstreamPath(final String pluginName, final String proxySelectorName) {
+        return String.join(PATH_SEPARATOR, DISCOVERY_UPSTREAM, pluginName, proxySelectorName);
     }
 
 }

@@ -24,6 +24,8 @@ import org.apache.shenyu.sdk.core.client.ShenyuSdkClient;
 import org.apache.shenyu.sdk.core.common.RequestTemplate;
 import org.apache.shenyu.sdk.spring.ShenyuClient;
 import org.apache.shenyu.sdk.spring.factory.AnnotatedParameterProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -38,11 +40,13 @@ import java.util.Map;
  */
 public class ShenyuClientMethodHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ShenyuClientMethodHandler.class);
+
     private final ShenyuClient shenyuClient;
 
     private final ShenyuSdkClient shenyuHttpClient;
 
-    private RequestTemplate requestTemplate;
+    private final RequestTemplate requestTemplate;
 
     private final Map<Class<? extends Annotation>, AnnotatedParameterProcessor> annotatedArgumentProcessors;
 
@@ -75,6 +79,7 @@ public class ShenyuClientMethodHandler {
         } else if (ShenyuResponse.class == returnType) {
             return shenyuResponse;
         } else if (shenyuResponse.getStatus() != HttpStatus.OK.value()) {
+            log.warn("handlerResponse http status warn shenyuResponse {}", JsonUtils.toJson(shenyuResponse));
             throw new HttpClientErrorException(HttpStatus.valueOf(shenyuResponse.getStatus()));
         } else if (StringUtils.hasText(shenyuResponse.getBody())) {
             return JsonUtils.jsonToObject(shenyuResponse.getBody(), returnType);

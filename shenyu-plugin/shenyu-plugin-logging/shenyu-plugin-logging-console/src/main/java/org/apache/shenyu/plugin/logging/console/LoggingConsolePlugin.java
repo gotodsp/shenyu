@@ -26,17 +26,19 @@ import org.apache.shenyu.common.enums.PluginEnum;
 import org.apache.shenyu.plugin.api.ShenyuPluginChain;
 import org.apache.shenyu.plugin.base.AbstractShenyuPlugin;
 import org.apache.shenyu.plugin.base.utils.CacheKeyUtils;
+import org.apache.shenyu.plugin.base.utils.MediaTypeUtils;
 import org.apache.shenyu.plugin.logging.common.constant.GenericLoggingConstant;
 import org.apache.shenyu.plugin.logging.common.entity.CommonLoggingRuleHandle;
 import org.apache.shenyu.plugin.logging.console.handler.LoggingConsolePluginDataHandler;
+import org.apache.shenyu.plugin.logging.desensitize.api.enums.DataDesensitizeEnum;
 import org.apache.shenyu.plugin.logging.desensitize.api.matcher.KeyWordMatch;
 import org.apache.shenyu.plugin.logging.desensitize.api.utils.DataDesensitizeUtils;
-import org.apache.shenyu.plugin.logging.desensitize.api.enums.DataDesensitizeEnum;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -70,16 +72,14 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
     private static final Logger LOG = LoggerFactory.getLogger(LoggingConsolePlugin.class);
 
     private static String dataDesensitizeAlg = DataDesensitizeEnum.CHARACTER_REPLACE.getDataDesensitizeAlg();
-
-    private static boolean desensitized;
-
-    private static KeyWordMatch keyWordMatch;
-
+    
     @Override
     protected Mono<Void> doExecute(final ServerWebExchange exchange, final ShenyuPluginChain chain,
                                    final SelectorData selector, final RuleData rule) {
         CommonLoggingRuleHandle commonLoggingRuleHandle = LoggingConsolePluginDataHandler.CACHED_HANDLE.get().obtainHandle(CacheKeyUtils.INST.getKey(rule));
         Set<String> keywordSets = Sets.newHashSet();
+        boolean desensitized = Boolean.FALSE;
+        KeyWordMatch keyWordMatch = new KeyWordMatch(Collections.emptySet());
         if (Objects.nonNull(commonLoggingRuleHandle)) {
             String keywords = commonLoggingRuleHandle.getKeyword();
             desensitized = StringUtils.isNotBlank(keywords) && commonLoggingRuleHandle.getMaskStatus();
@@ -93,11 +93,12 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
         ServerHttpRequest request = exchange.getRequest();
         //"Print Request Info: "
         StringBuilder requestInfo = new StringBuilder().append(System.lineSeparator());
-        requestInfo.append(getRequestUri(request)).append(getRequestMethod(request)).append(System.lineSeparator())
-                .append(getRequestHeaders(request)).append(System.lineSeparator())
-                .append(getQueryParams(request)).append(System.lineSeparator());
-        return chain.execute(exchange.mutate().request(new LoggingServerHttpRequest(request, requestInfo))
-                .response(new LoggingServerHttpResponse(exchange.getResponse(), requestInfo)).build());
+        requestInfo.append(getRequestUri(request, desensitized, keyWordMatch))
+                .append(getRequestMethod(request, desensitized, keyWordMatch)).append(System.lineSeparator())
+                .append(getRequestHeaders(request, desensitized, keyWordMatch)).append(System.lineSeparator())
+                .append(getQueryParams(request, desensitized, keyWordMatch)).append(System.lineSeparator());
+        return chain.execute(exchange.mutate().request(new LoggingServerHttpRequest(request, requestInfo, desensitized, keyWordMatch))
+                .response(new LoggingServerHttpResponse(exchange.getResponse(), requestInfo, desensitized, keyWordMatch)).build());
     }
 
     @Override
@@ -110,7 +111,7 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
         return PluginEnum.LOGGING_CONSOLE.getName();
     }
 
-    private String getRequestMethod(final ServerHttpRequest request) {
+    private String getRequestMethod(final ServerHttpRequest request, final Boolean desensitized, final KeyWordMatch keyWordMatch) {
         // desensitize request method
         String requestMethod = "";
         if (Objects.nonNull(request.getMethod())) {
@@ -120,14 +121,14 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
         return "Request Method: " + requestMethod + System.lineSeparator();
     }
 
-    private String getRequestUri(final ServerHttpRequest request) {
+    private String getRequestUri(final ServerHttpRequest request, final Boolean desensitized, final KeyWordMatch keyWordMatch) {
         // desensitize request uri
         String requestUri = DataDesensitizeUtils.desensitizeSingleKeyword(desensitized, GenericLoggingConstant.REQUEST_URI,
                 request.getURI().toString(), keyWordMatch, dataDesensitizeAlg);
         return "Request Uri: " + requestUri + System.lineSeparator();
     }
 
-    private String getQueryParams(final ServerHttpRequest request) {
+    private String getQueryParams(final ServerHttpRequest request, final Boolean desensitized, final KeyWordMatch keyWordMatch) {
         MultiValueMap<String, String> params = request.getQueryParams();
         StringBuilder logInfo = new StringBuilder();
         if (!params.isEmpty()) {
@@ -144,12 +145,12 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
         return logInfo.toString();
     }
 
-    private String getRequestHeaders(final ServerHttpRequest request) {
+    private String getRequestHeaders(final ServerHttpRequest request, final Boolean desensitized, final KeyWordMatch keyWordMatch) {
         HttpHeaders headers = request.getHeaders();
         final StringBuilder logInfo = new StringBuilder();
         if (!headers.isEmpty()) {
             logInfo.append("[Request Headers Start]").append(System.lineSeparator());
-            logInfo.append(getHeaders(headers));
+            logInfo.append(getHeaders(headers, desensitized, keyWordMatch));
             logInfo.append("[Request Headers End]").append(System.lineSeparator());
         }
         return logInfo.toString();
@@ -159,7 +160,7 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
         LOG.info(info);
     }
 
-    private String getHeaders(final HttpHeaders headers) {
+    private String getHeaders(final HttpHeaders headers, final Boolean desensitized, final KeyWordMatch keyWordMatch) {
         StringBuilder logInfo = new StringBuilder();
         Set<Map.Entry<String, List<String>>> entrySet = headers.entrySet();
         entrySet.forEach(entry -> {
@@ -174,12 +175,19 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
     }
 
     static class LoggingServerHttpRequest extends ServerHttpRequestDecorator {
-
+        
         private final StringBuilder logInfo;
+        
+        private final Boolean desensitized;
+        
+        private final KeyWordMatch keyWordMatch;
 
-        LoggingServerHttpRequest(final ServerHttpRequest delegate, final StringBuilder logInfo) {
+        LoggingServerHttpRequest(final ServerHttpRequest delegate, final StringBuilder logInfo,
+                                 final Boolean desensitized, final KeyWordMatch keyWordMatch) {
             super(delegate);
             this.logInfo = logInfo;
+            this.desensitized = desensitized;
+            this.keyWordMatch = keyWordMatch;
         }
 
         @Override
@@ -206,11 +214,18 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
         private final StringBuilder logInfo;
 
         private final ServerHttpResponse serverHttpResponse;
+        
+        private final Boolean desensitized;
+        
+        private final KeyWordMatch keyWordMatch;
 
-        LoggingServerHttpResponse(final ServerHttpResponse delegate, final StringBuilder logInfo) {
+        LoggingServerHttpResponse(final ServerHttpResponse delegate, final StringBuilder logInfo,
+                                  final Boolean desensitized, final KeyWordMatch keyWordMatch) {
             super(delegate);
             this.logInfo = logInfo;
             this.serverHttpResponse = delegate;
+            this.desensitized = desensitized;
+            this.keyWordMatch = keyWordMatch;
             this.logInfo.append(System.lineSeparator());
         }
 
@@ -225,6 +240,16 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
             logInfo.append(System.lineSeparator());
             logInfo.append("Response Code: ").append(this.serverHttpResponse.getStatusCode()).append(System.lineSeparator());
             logInfo.append(getResponseHeaders()).append(System.lineSeparator());
+            final MediaType mediaType = serverHttpResponse.getHeaders().getContentType();
+            if (MediaTypeUtils.isByteType(mediaType)) {
+                return Flux.from(body).doFinally(signal -> {
+                    logInfo.append("[Response Body Start]").append(System.lineSeparator());
+                    logInfo.append("[bytes]").append(System.lineSeparator());
+                    logInfo.append("[Response Body End]").append(System.lineSeparator());
+                    // when response, print all request info.
+                    print(logInfo.toString());
+                });
+            }
             BodyWriter writer = new BodyWriter();
             return Flux.from(body).doOnNext(buffer -> writer.write(buffer.asByteBuffer().asReadOnlyBuffer())).doFinally(signal -> {
                 logInfo.append("[Response Body Start]").append(System.lineSeparator());
@@ -239,7 +264,7 @@ public class LoggingConsolePlugin extends AbstractShenyuPlugin {
 
         private String getResponseHeaders() {
             return System.lineSeparator() + "[Response Headers Start]" + System.lineSeparator()
-                    + LoggingConsolePlugin.this.getHeaders(serverHttpResponse.getHeaders())
+                    + LoggingConsolePlugin.this.getHeaders(serverHttpResponse.getHeaders(), desensitized, keyWordMatch)
                     + "[Response Headers End]" + System.lineSeparator();
         }
     }

@@ -20,8 +20,10 @@ package org.apache.shenyu.admin.service.impl;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shenyu.admin.config.properties.DashboardProperties;
 import org.apache.shenyu.admin.config.properties.JwtProperties;
 import org.apache.shenyu.admin.config.properties.LdapProperties;
+import org.apache.shenyu.admin.config.properties.SecretProperties;
 import org.apache.shenyu.admin.mapper.DashboardUserMapper;
 import org.apache.shenyu.admin.mapper.RoleMapper;
 import org.apache.shenyu.admin.mapper.UserRoleMapper;
@@ -42,11 +44,14 @@ import org.apache.shenyu.admin.service.DashboardUserService;
 import org.apache.shenyu.admin.service.publish.UserEventPublisher;
 import org.apache.shenyu.admin.transfer.DashboardUserTransfer;
 import org.apache.shenyu.admin.utils.Assert;
+import org.apache.shenyu.admin.utils.FailI18nMessage;
 import org.apache.shenyu.admin.utils.JwtUtils;
-import org.apache.shenyu.admin.utils.ListUtil;
 import org.apache.shenyu.admin.utils.SessionUtil;
+import org.apache.shenyu.admin.utils.WebI18nAssert;
 import org.apache.shenyu.common.constant.AdminConstants;
+import org.apache.shenyu.common.utils.AesUtils;
 import org.apache.shenyu.common.utils.DigestUtils;
+import org.apache.shenyu.common.utils.ListUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ldap.NameNotFoundException;
@@ -86,13 +91,19 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     
     private final UserEventPublisher publisher;
     
+    private final DashboardProperties properties;
+
+    private final SecretProperties secretProperties;
+
     public DashboardUserServiceImpl(final DashboardUserMapper dashboardUserMapper,
                                     final UserRoleMapper userRoleMapper,
                                     final RoleMapper roleMapper,
                                     @Nullable final LdapProperties ldapProperties,
                                     @Nullable final LdapTemplate ldapTemplate,
                                     final JwtProperties jwtProperties,
-                                    final UserEventPublisher publisher) {
+                                    final UserEventPublisher publisher,
+                                    final DashboardProperties properties,
+                                    final SecretProperties secretProperties) {
         this.dashboardUserMapper = dashboardUserMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMapper = roleMapper;
@@ -100,6 +111,8 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         this.ldapTemplate = ldapTemplate;
         this.jwtProperties = jwtProperties;
         this.publisher = publisher;
+        this.properties = properties;
+        this.secretProperties = secretProperties;
     }
     
     /**
@@ -257,23 +270,32 @@ public class DashboardUserServiceImpl implements DashboardUserService {
     @Override
     public LoginDashboardUserVO login(final String userName, final String password) {
         DashboardUserVO dashboardUserVO = null;
+        final String cbcDecryptPassword;
+        if (StringUtils.isNotBlank(secretProperties.getKey()) && StringUtils.isNotBlank(secretProperties.getIv())) {
+            cbcDecryptPassword = AesUtils.cbcDecrypt(secretProperties.getKey(), secretProperties.getIv(), password);
+        } else {
+            cbcDecryptPassword = password;
+        }
+
         if (Objects.nonNull(ldapTemplate)) {
-            dashboardUserVO = loginByLdap(userName, password);
+            dashboardUserVO = loginByLdap(userName, cbcDecryptPassword);
         }
         
         if (Objects.isNull(dashboardUserVO)) {
-            dashboardUserVO = loginByDatabase(userName, password);
+            dashboardUserVO = loginByDatabase(userName, cbcDecryptPassword);
         }
         
         final LoginDashboardUserVO loginDashboardUserVO = LoginDashboardUserVO.buildLoginDashboardUserVO(dashboardUserVO);
         final DashboardUserVO finalDashboardUserVO = dashboardUserVO;
-        return Optional.ofNullable(loginDashboardUserVO).map(loginUser -> {
-            if (Boolean.FALSE.equals(loginUser.getEnabled())) {
-                return loginUser;
-            }
-            return loginUser.setToken(JwtUtils.generateToken(finalDashboardUserVO.getUserName(), finalDashboardUserVO.getPassword(),
-                    jwtProperties.getExpiredSeconds())).setExpiredTime(jwtProperties.getExpiredSeconds());
-        }).orElse(null);
+        return Optional.ofNullable(loginDashboardUserVO)
+                .map(loginUser -> {
+                    if (Boolean.FALSE.equals(loginUser.getEnabled())) {
+                        return loginUser;
+                    }
+                    return loginUser.setToken(JwtUtils.generateToken(finalDashboardUserVO.getUserName(), finalDashboardUserVO.getPassword(),
+                            jwtProperties.getExpiredSeconds())).setExpiredTime(jwtProperties.getExpiredSeconds());
+                })
+                .orElse(null);
     }
     
     /**
@@ -284,8 +306,12 @@ public class DashboardUserServiceImpl implements DashboardUserService {
      */
     @Override
     public int modifyPassword(final DashboardUserModifyPasswordDTO dashboardUserModifyPasswordDTO) {
+        DashboardUserDO before = dashboardUserMapper.selectById(dashboardUserModifyPasswordDTO.getId());
+        Assert.notNull(before, "current user is not found");
+        Assert.isTrue(Boolean.TRUE.equals(before.getEnabled()), "current user is locked");
+        Assert.isTrue(Objects.equals(before.getPassword(), dashboardUserModifyPasswordDTO.getOldPassword()), "old password is error");
+        
         DashboardUserDO dashboardUserDO = DashboardUserDO.buildDashboardUserDO(dashboardUserModifyPasswordDTO);
-        DashboardUserDO before = dashboardUserMapper.selectById(dashboardUserDO.getId());
         int updateCount = dashboardUserMapper.updateSelective(dashboardUserDO);
         if (updateCount > 0) {
             publisher.onUpdated(dashboardUserDO, before);
@@ -293,6 +319,20 @@ public class DashboardUserServiceImpl implements DashboardUserService {
         return updateCount;
     }
     
+    @Override
+    public boolean checkUserPassword(final String userId) {
+        final DashboardUserDO userDO = dashboardUserMapper.selectById(userId);
+        
+        WebI18nAssert.isTrue(!Objects.equals(userDO.getDateCreated(), userDO.getDateUpdated()), FailI18nMessage.PASSWORD_IS_DEFAULT);
+        
+        // The password has not been changed for a long time
+        WebI18nAssert.isTrue(passwordUsedLongTime(userDO), FailI18nMessage.PASSWORD_USED_FOR_LONG_TIME);
+        
+        // Weak password blacklist
+        
+        return true;
+    }
+
     private DashboardUserVO loginByLdap(final String userName, final String password) {
         Assert.notNull(ldapProperties, "ldap config is not enable");
         String searchBase = String.format("%s=%s,%s", ldapProperties.getLoginField(), LdapEncoder.nameEncode(userName), ldapProperties.getBaseDn());
@@ -343,5 +383,9 @@ public class DashboardUserServiceImpl implements DashboardUserService {
                         .roleId(roleId)
                         .build()))
                 .collect(Collectors.toList()));
+    }
+    
+    private boolean passwordUsedLongTime(final DashboardUserDO userDO) {
+        return userDO.getDateUpdated().getTime() >= System.currentTimeMillis() - properties.getSuperAdminPasswordValidDuration();
     }
 }

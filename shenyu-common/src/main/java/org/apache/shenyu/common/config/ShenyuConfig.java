@@ -45,8 +45,6 @@ public class ShenyuConfig {
     private FallbackPath fallback = new FallbackPath();
     
     private ExtPlugin extPlugin = new ExtPlugin();
-
-    private MatchCache matchCache = new MatchCache();
     
     private Scheduler scheduler = new Scheduler();
     
@@ -64,7 +62,13 @@ public class ShenyuConfig {
     
     private MetricsConfig metrics = new MetricsConfig();
 
-    private ShenyuTrieConfig trie = new ShenyuTrieConfig();
+    private SelectorMatchCache selectorMatchCache = new SelectorMatchCache();
+    
+    private RuleMatchCache ruleMatchCache = new RuleMatchCache();
+    
+    private SpringCloudCacheConfig springCloudCache = new SpringCloudCacheConfig();
+    
+    private AlertConfig alert = new AlertConfig();
     
     /**
      * Gets health.
@@ -209,24 +213,6 @@ public class ShenyuConfig {
     public void setExtPlugin(final ExtPlugin extPlugin) {
         this.extPlugin = extPlugin;
     }
-
-    /**
-     * Gets match cache.
-     *
-     * @return the match cache
-     */
-    public MatchCache getMatchCache() {
-        return matchCache;
-    }
-
-    /**
-     * Sets match cache.
-     *
-     * @param matchCache the match cache
-     */
-    public void setMatchCache(final MatchCache matchCache) {
-        this.matchCache = matchCache;
-    }
     
     /**
      * Gets file.
@@ -335,25 +321,77 @@ public class ShenyuConfig {
     public void setCross(final CrossFilterConfig cross) {
         this.cross = cross;
     }
-
+    
     /**
-     * get shenyu trie config.
+     * get selector match cache.
      *
-     * @return shenyu trie config
+     * @return selector match cache
      */
-    public ShenyuTrieConfig getTrie() {
-        return trie;
+    public SelectorMatchCache getSelectorMatchCache() {
+        return selectorMatchCache;
     }
-
+    
     /**
-     * set shenyu trie config.
+     * set selector match cache.
      *
-     * @param trie trie config
+     * @param selectorMatchCache selector match cache
      */
-    public void setTrie(final ShenyuTrieConfig trie) {
-        this.trie = trie;
+    public void setSelectorMatchCache(final SelectorMatchCache selectorMatchCache) {
+        this.selectorMatchCache = selectorMatchCache;
     }
-
+    
+    /**
+     * get rule match cache.
+     *
+     * @return rule match cache
+     */
+    public RuleMatchCache getRuleMatchCache() {
+        return ruleMatchCache;
+    }
+    
+    /**
+     * set rule match cache.
+     *
+     * @param ruleMatchCache rule match cache
+     */
+    public void setRuleMatchCache(final RuleMatchCache ruleMatchCache) {
+        this.ruleMatchCache = ruleMatchCache;
+    }
+    
+    /**
+     * get spring cloud cache config.
+     *
+     * @return {@linkplain SpringCloudCacheConfig}
+     */
+    public SpringCloudCacheConfig getSpringCloudCache() {
+        return springCloudCache;
+    }
+    
+    /**
+     * set spring cloud cache config.
+     *
+     * @param springCloudCache cache config
+     */
+    public void setSpringCloudCache(final SpringCloudCacheConfig springCloudCache) {
+        this.springCloudCache = springCloudCache;
+    }
+    
+    /**
+     * Get shenyu alert report config.
+     * @return alert config
+     */
+    public AlertConfig getAlert() {
+        return alert;
+    }
+    
+    /**
+     * Set shenyu alert report config.
+     * @param alert alert config
+     */
+    public void setAlert(final AlertConfig alert) {
+        this.alert = alert;
+    }
+    
     /**
      * The type Scheduler.
      */
@@ -526,134 +564,134 @@ public class ShenyuConfig {
             this.scheduleDelay = scheduleDelay;
         }
     }
-
-    /**
-     * the match cache.
-     */
-    public static class MatchCache {
-        
-        private SelectorCacheConfig selector = new SelectorCacheConfig();
-        
-        private RuleCacheConfig rule = new RuleCacheConfig();
     
+    public static class SelectorMatchCache {
+        
         /**
+         * the match cache, L1 cache.
+         */
+        private MatchCacheConfig cache = new MatchCacheConfig();
+        
+        /**
+         * the trie cache, L2 cache.
+         */
+        private ShenyuTrieConfig trie = new ShenyuTrieConfig();
+        
+/**
          * get selector cache config.
          *
-         * @return {@linkplain SelectorCacheConfig}
+         * @return {@linkplain MatchCacheConfig}
          */
-        public SelectorCacheConfig getSelector() {
-            return selector;
+        public MatchCacheConfig getCache() {
+            return cache;
         }
-    
+        
         /**
          * set selector cache config.
          *
-         * @param selector SelectorCacheConfig
+         * @param cache SelectorCacheConfig
          */
-        public void setSelector(final SelectorCacheConfig selector) {
-            this.selector = selector;
+        public void setCache(final MatchCacheConfig cache) {
+            this.cache = cache;
         }
-    
+        
         /**
          * get rule cache Config.
          *
          * @return rule cache config
          */
-        public RuleCacheConfig getRule() {
-            return rule;
+        public ShenyuTrieConfig getTrie() {
+            return trie;
         }
-    
+        
         /**
          * set rule cache config.
          *
-         * @param rule rule cache
+         * @param trie rule cache
          */
-        public void setRule(final RuleCacheConfig rule) {
-            this.rule = rule;
+        public void setTrie(final ShenyuTrieConfig trie) {
+            this.trie = trie;
         }
     }
     
-    /**
-     * selector cache.
-     */
-    public static class SelectorCacheConfig {
+    public static class RuleMatchCache {
         
-        private boolean selectorEnabled;
-    
         /**
-         * initialCapacity.
+         * the match cache, L1 cache.
          */
-        private int initialCapacity = 10000;
-    
+        private MatchCacheConfig cache = new MatchCacheConfig();
+        
         /**
-         * maximumSize.
+         * the trie cache, L2 cache.
          */
-        private long maximumSize = 10000L;
-    
+        private ShenyuTrieConfig trie = new ShenyuTrieConfig();
+        
         /**
-         * Get selector cache enabled.
+         * get selector cache config.
          *
-         * @return the enabled
+         * @return {@linkplain MatchCacheConfig}
          */
-        public boolean getSelectorEnabled() {
-            return selectorEnabled;
+        public MatchCacheConfig getCache() {
+            return cache;
         }
-    
+        
         /**
-         * Set selector enabled.
+         * set selector cache config.
          *
-         * @param selectorEnabled the enabled
+         * @param cache SelectorCacheConfig
          */
-        public void setSelectorEnabled(final boolean selectorEnabled) {
-            this.selectorEnabled = selectorEnabled;
+        public void setCache(final MatchCacheConfig cache) {
+            this.cache = cache;
         }
-    
+        
         /**
-         * get initialCapacity.
+         * get rule cache Config.
          *
-         * @return initialCapacity
+         * @return rule cache config
          */
-        public int getInitialCapacity() {
-            return initialCapacity;
+        public ShenyuTrieConfig getTrie() {
+            return trie;
         }
-    
+        
         /**
-         * set initialCapacity.
+         * set rule cache config.
          *
-         * @param initialCapacity initialCapacity
+         * @param trie rule cache
          */
-        public void setInitialCapacity(final int initialCapacity) {
-            this.initialCapacity = initialCapacity;
-        }
-    
-        /**
-         * get maximumSize.
-         *
-         * @return maximumSize
-         */
-        public long getMaximumSize() {
-            return maximumSize;
-        }
-    
-        /**
-         * set maximumSize.
-         *
-         * @param maximumSize maximumSize
-         */
-        public void setMaximumSize(final long maximumSize) {
-            this.maximumSize = maximumSize;
+        public void setTrie(final ShenyuTrieConfig trie) {
+            this.trie = trie;
         }
     }
     
     /**
      * rule cache config.
      */
-    public static class RuleCacheConfig {
+    public static class MatchCacheConfig {
+        
+        private Boolean enabled = Boolean.TRUE;
 
         private int initialCapacity = 10000;
         
         private long maximumSize = 10000L;
-    
+        
+        /**
+         * get rule cache enabled.
+         *
+         * @return rule cache enabled
+         */
+        public Boolean getEnabled() {
+            return enabled;
+        }
+        
+        /**
+         * set rule cache enabled.
+         *
+         * @param enabled rule cache enabled
+         */
+        public void setEnabled(final Boolean enabled) {
+            this.enabled = enabled;
+        }
+        
         /**
          * get initial capacity.
          *
@@ -1511,7 +1549,12 @@ public class ShenyuConfig {
          * max frame pay load size mb.
          */
         private Integer maxFramePayloadSize = 10;
-    
+
+        /**
+         * whether enable ping.
+         */
+        private Boolean enableProxyPing = false;
+
         /**
          * Get max frame payload size.
          *
@@ -1520,7 +1563,7 @@ public class ShenyuConfig {
         public Integer getMaxFramePayloadSize() {
             return maxFramePayloadSize;
         }
-    
+
         /**
          * Set max frame payload size.
          *
@@ -1528,6 +1571,22 @@ public class ShenyuConfig {
          */
         public void setMaxFramePayloadSize(final Integer maxFramePayloadSize) {
             this.maxFramePayloadSize = maxFramePayloadSize;
+        }
+
+        /**
+         * Get whether enable ping.
+         * @return whether ping is enabled
+         */
+        public Boolean getEnableProxyPing() {
+            return enableProxyPing;
+        }
+
+        /**
+         * enable ping or disable ping.
+         * @param enableProxyPing enable ping or disable ping
+         */
+        public void setEnableProxyPing(final boolean enableProxyPing) {
+            this.enableProxyPing = enableProxyPing;
         }
     }
     
@@ -1762,7 +1821,6 @@ public class ShenyuConfig {
     
         /**
          * Sets metrics name.
-         *
          * @param name the metrics name
          */
         public void setName(final String name) {
@@ -1771,7 +1829,6 @@ public class ShenyuConfig {
     
         /**
          * Gets host.
-         *
          * @return the host
          */
         public String getHost() {
@@ -1780,7 +1837,6 @@ public class ShenyuConfig {
     
         /**
          * Sets host.
-         *
          * @param host the host
          */
         public void setHost(final String host) {
@@ -1789,7 +1845,6 @@ public class ShenyuConfig {
     
         /**
          * Gets port.
-         *
          * @return the port
          */
         public Integer getPort() {
@@ -1807,7 +1862,6 @@ public class ShenyuConfig {
     
         /**
          * Gets jmx config.
-         *
          * @return the jmx config
          */
         public String getJmxConfig() {
@@ -1816,7 +1870,6 @@ public class ShenyuConfig {
     
         /**
          * Sets jmx config.
-         *
          * @param jmxConfig the jmx config
          */
         public void setJmxConfig(final String jmxConfig) {
@@ -1825,7 +1878,6 @@ public class ShenyuConfig {
     
         /**
          * Gets props.
-         *
          * @return the props
          */
         public Properties getProps() {
@@ -1834,7 +1886,6 @@ public class ShenyuConfig {
     
         /**
          * Sets props.
-         *
          * @param props the props
          */
         public void setProps(final Properties props) {
@@ -1847,13 +1898,9 @@ public class ShenyuConfig {
      */
     public static class ShenyuTrieConfig {
         
-        private Boolean enabled = Boolean.TRUE;
+        private Boolean enabled = Boolean.FALSE;
         
-        private Long childrenSize = 10000L;
-
-        private Long pathRuleCacheSize = 1000L;
-        
-        private Long pathVariableSize = 1000L;
+        private Long cacheSize = 512L;
 
         /**
          * match mode.
@@ -1863,7 +1910,6 @@ public class ShenyuConfig {
     
         /**
          * get match enabled.
-         *
          * @return Boolean
          */
         public Boolean getEnabled() {
@@ -1872,7 +1918,6 @@ public class ShenyuConfig {
     
         /**
          * set match enabled.
-         *
          * @param enabled enabled
          */
         public void setEnabled(final Boolean enabled) {
@@ -1880,63 +1925,24 @@ public class ShenyuConfig {
         }
     
         /**
-         * get trie children size.
-         *
-         * @return trie children size
+         * get cache size.
+         * @return cache size
          */
-        public Long getChildrenSize() {
-            return childrenSize;
+        public Long getCacheSize() {
+            return cacheSize;
         }
 
         /**
-         * set trie children size.
-         *
-         * @param childrenSize trie children size
+         * set cache size.
+         * @param cacheSize cache size
          */
-        public void setChildrenSize(final Long childrenSize) {
-            this.childrenSize = childrenSize;
-        }
-
-        /**
-         * get path rule cache size.
-         *
-         * @return path rule cache size
-         */
-        public Long getPathRuleCacheSize() {
-            return pathRuleCacheSize;
-        }
-
-        /**
-         * set path rule cache size.
-         *
-         * @param pathRuleCacheSize path rule cache size
-         */
-        public void setPathRuleCacheSize(final Long pathRuleCacheSize) {
-            this.pathRuleCacheSize = pathRuleCacheSize;
-        }
-        
-        /**
-         * get path variable node size.
-         *
-         * @return path variable node size
-         */
-        public Long getPathVariableSize() {
-            return pathVariableSize;
-        }
-    
-        /**
-         * set path variable node size.
-         *
-         * @param pathVariableSize path variable node size
-         */
-        public void setPathVariableSize(final Long pathVariableSize) {
-            this.pathVariableSize = pathVariableSize;
+        public void setCacheSize(final Long cacheSize) {
+            this.cacheSize = cacheSize;
         }
     
         /**
          * get match mode.
-         *
-         * @return motch mode
+         * @return match mode
          */
         public String getMatchMode() {
             return matchMode;
@@ -1944,11 +1950,69 @@ public class ShenyuConfig {
 
         /**
          * set match mode.
-         *
          * @param matchMode match mode
          */
         public void setMatchMode(final String matchMode) {
             this.matchMode = matchMode;
+        }
+    }
+    
+    public static class SpringCloudCacheConfig {
+        private Boolean enabled = Boolean.FALSE;
+        
+        /**
+         * get shenyu spring cloud cache status.
+         * @return the enabled status
+         */
+        public Boolean getEnabled() {
+            return enabled;
+        }
+        
+        /**
+         * set shenyu spring cloud cache status.
+         * @param enabled the status
+         */
+        public void setEnabled(final Boolean enabled) {
+            this.enabled = enabled;
+        }
+    }
+    
+    public static class AlertConfig {
+        private Boolean enabled = Boolean.FALSE;
+        
+        private String admins = "localhost:9095";
+        
+        /**
+         * get shenyu spring cloud cache status.
+         * @return the enabled status
+         */
+        public Boolean getEnabled() {
+            return enabled;
+        }
+        
+        /**
+         * set shenyu spring cloud cache status.
+         * @param enabled the status
+         */
+        public void setEnabled(final Boolean enabled) {
+            this.enabled = enabled;
+        }
+        
+        /**
+         * Get shenyu admin alert report urls.
+         * eg: localhost:9095,localhost:9093
+         * @return admin alert report server list
+         */
+        public String getAdmins() {
+            return admins;
+        }
+        
+        /**
+         * Set shenyu admin alert report url.
+         * @param admins admin url
+         */
+        public void setAdmins(final String admins) {
+            this.admins = admins;
         }
     }
 }

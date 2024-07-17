@@ -20,44 +20,44 @@ package org.apache.shenyu.admin.model.dto;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.admin.mapper.PluginMapper;
 import org.apache.shenyu.admin.validation.annotation.Existed;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
 
 /**
  * this is plugin from by web front.
  */
 public class PluginDTO implements Serializable {
-    
+
     private static final long serialVersionUID = 789913506331671329L;
-    
+
     /**
      * primary key.
      */
     @Existed(provider = PluginMapper.class, nullOfIgnore = true, message = "the plugin is not exited")
     private String id;
-    
+
     /**
      * plugin name.
      */
     @NotBlank
     private String name;
-    
+
     /**
      * plugin config.
      */
     private String config;
-    
+
     /**
      * plugin role.
      */
     @NotBlank
     private String role;
-    
+
     /**
      * plugin sort.
      */
@@ -74,14 +74,24 @@ public class PluginDTO implements Serializable {
     /**
      * plugin jar.
      */
-    private MultipartFile file;
+    private String file;
+
+    /**
+     * plugin Handle List.
+     */
+    private List<PluginHandleDTO> pluginHandleList;
+
+    /**
+     * namespace id.
+     */
+    private String namespaceId;
 
     /**
      * Gets the value of file.
      *
      * @return the value of file
      */
-    public MultipartFile getFile() {
+    public String getFile() {
         return file;
     }
 
@@ -90,7 +100,7 @@ public class PluginDTO implements Serializable {
      *
      * @param file file
      */
-    public void setFile(final MultipartFile file) {
+    public void setFile(final String file) {
         this.file = file;
     }
 
@@ -102,7 +112,7 @@ public class PluginDTO implements Serializable {
     public String getId() {
         return id;
     }
-    
+
     /**
      * Sets the id.
      *
@@ -111,7 +121,7 @@ public class PluginDTO implements Serializable {
     public void setId(final String id) {
         this.id = id;
     }
-    
+
     /**
      * Gets the value of name.
      *
@@ -120,7 +130,7 @@ public class PluginDTO implements Serializable {
     public String getName() {
         return name;
     }
-    
+
     /**
      * Sets the name.
      *
@@ -129,7 +139,7 @@ public class PluginDTO implements Serializable {
     public void setName(final String name) {
         this.name = name;
     }
-    
+
     /**
      * Gets the value of config.
      *
@@ -138,7 +148,7 @@ public class PluginDTO implements Serializable {
     public String getConfig() {
         return config;
     }
-    
+
     /**
      * Sets the config.
      *
@@ -150,7 +160,7 @@ public class PluginDTO implements Serializable {
         }
         this.config = config;
     }
-    
+
     /**
      * Gets the value of role.
      *
@@ -159,7 +169,7 @@ public class PluginDTO implements Serializable {
     public String getRole() {
         return role;
     }
-    
+
     /**
      * Sets the role.
      *
@@ -168,7 +178,7 @@ public class PluginDTO implements Serializable {
     public void setRole(final String role) {
         this.role = role;
     }
-    
+
     /**
      * Gets the value of sort.
      *
@@ -177,7 +187,7 @@ public class PluginDTO implements Serializable {
     public Integer getSort() {
         return sort;
     }
-    
+
     /**
      * Sets the sort.
      *
@@ -186,7 +196,7 @@ public class PluginDTO implements Serializable {
     public void setSort(final Integer sort) {
         this.sort = sort;
     }
-    
+
     /**
      * Gets the value of enabled.
      *
@@ -195,7 +205,7 @@ public class PluginDTO implements Serializable {
     public Boolean getEnabled() {
         return enabled;
     }
-    
+
     /**
      * Sets the enabled.
      *
@@ -204,27 +214,61 @@ public class PluginDTO implements Serializable {
     public void setEnabled(final Boolean enabled) {
         this.enabled = enabled;
     }
-    
+
+    /**
+     * Gets the plugin handle list.
+     *
+     * @return the plugin handle list
+     */
+    public List<PluginHandleDTO> getPluginHandleList() {
+        return pluginHandleList;
+    }
+
+    /**
+     * Sets the plugin handle list.
+     *
+     * @param pluginHandleList the plugin handle list
+     */
+    public void setPluginHandleList(final List<PluginHandleDTO> pluginHandleList) {
+        this.pluginHandleList = pluginHandleList;
+    }
+
+    /**
+     * Sets the namespaceId.
+     *
+     * @return the namespaceId
+     */
+    public String getNamespaceId() {
+        return namespaceId;
+    }
+
+    /**
+     * set namespace Id.
+     *
+     * @param namespaceId namespaceId
+     */
+    public void setNamespaceId(final String namespaceId) {
+        this.namespaceId = namespaceId;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof PluginDTO)) {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
         PluginDTO pluginDTO = (PluginDTO) o;
-        return Objects.equals(id, pluginDTO.id)
-                && Objects.equals(name, pluginDTO.name)
-                && Objects.equals(config, pluginDTO.config)
-                && Objects.equals(role, pluginDTO.role)
-                && Objects.equals(sort, pluginDTO.sort)
-                && Objects.equals(enabled, pluginDTO.enabled)
-                && Objects.equals(file, pluginDTO.file);
+        return Objects.equals(id, pluginDTO.id) && Objects.equals(name, pluginDTO.name)
+                && Objects.equals(config, pluginDTO.config) && Objects.equals(role, pluginDTO.role)
+                && Objects.equals(sort, pluginDTO.sort) && Objects.equals(enabled, pluginDTO.enabled)
+                && Objects.equals(file, pluginDTO.file) && Objects.equals(pluginHandleList, pluginDTO.pluginHandleList)
+                && Objects.equals(namespaceId, pluginDTO.namespaceId);
     }
-    
+
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, config, role, sort, enabled, file);
+        return Objects.hash(id, name, config, role, sort, enabled, file, pluginHandleList, namespaceId);
     }
 }

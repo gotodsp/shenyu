@@ -77,7 +77,7 @@ public final class ApiControllerTest {
     @BeforeEach
     public void setUp() {
         this.mockMvc = MockMvcBuilders.standaloneSetup(apiController)
-                .setControllerAdvice(new ExceptionHandlers())
+                .setControllerAdvice(new ExceptionHandlers(null))
                 .build();
         this.apiVO = ApiVO.builder()
                 .id("123")
@@ -90,7 +90,7 @@ public final class ApiControllerTest {
                 .rpcType("/dubbo")
                 .state(0)
                 .apiSource(0)
-                .document("document")
+                .document("{}")
                 .build();
         SpringBeanUtils.getInstance().setApplicationContext(mock(ConfigurableApplicationContext.class));
     }
@@ -109,8 +109,8 @@ public final class ApiControllerTest {
                         .param("apiPath", "string")
                         .param("state", "0")
                         .param("tagId", "")
-                        .param("currentPage", pageParameter.getCurrentPage() + "")
-                        .param("pageSize", pageParameter.getPageSize() + ""))
+                        .param("currentPage", String.valueOf(pageParameter.getCurrentPage()))
+                        .param("pageSize", String.valueOf(pageParameter.getPageSize())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message", is(ShenyuResultMessage.QUERY_SUCCESS)))
                 .andExpect(jsonPath("$.data.dataList[0].contextPath", is(apiVO.getContextPath())))

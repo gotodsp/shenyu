@@ -20,6 +20,7 @@ package org.apache.shenyu.loadbalancer.entity;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -102,9 +103,9 @@ public final class Upstream {
      */
     private AtomicLong inflight = new AtomicLong(1);
 
-    private AtomicLong succeeded = new AtomicLong(0);
+    private final AtomicLong succeeded = new AtomicLong(0);
 
-    private AtomicLong succeededElapsed = new AtomicLong(0);
+    private final AtomicLong succeededElapsed = new AtomicLong(0);
 
     private Upstream(final Builder builder) {
         this.protocol = builder.protocol;
@@ -385,7 +386,17 @@ public final class Upstream {
         if (StringUtils.isBlank(protocol)) {
             protocol = "http://";
         }
-        return protocol + this.getUrl().trim();
+        return protocol + Optional.ofNullable(this.getUrl()).map(String::trim).orElse(null);
+    }
+    
+    /**
+     * Build request with protocol.
+     *
+     * @param protocol protocol
+     * @return domain
+     */
+    public String buildDomain(final String protocol) {
+        return protocol + Optional.ofNullable(this.getUrl()).map(String::trim).orElse(null);
     }
 
     /**

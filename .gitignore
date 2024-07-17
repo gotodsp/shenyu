@@ -21,6 +21,8 @@ cobertura.ser
 
 # idea ignore
 .idea/
+!/.idea/icon.svg
+!/.idea/vcs.xml
 *.ipr
 *.iml
 *.iws
@@ -41,3 +43,5 @@ Thumbs.db
 # agent build ignore
 /agent/
 
+# rust ignore
+*.lock

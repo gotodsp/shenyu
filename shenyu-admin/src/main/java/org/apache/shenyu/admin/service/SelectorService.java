@@ -23,6 +23,7 @@ import org.apache.shenyu.admin.model.entity.SelectorDO;
 import org.apache.shenyu.admin.model.page.CommonPager;
 import org.apache.shenyu.admin.model.query.SelectorQuery;
 import org.apache.shenyu.admin.model.query.SelectorQueryCondition;
+import org.apache.shenyu.admin.model.result.ConfigImportResult;
 import org.apache.shenyu.admin.model.vo.SelectorVO;
 import org.apache.shenyu.admin.utils.Assert;
 import org.apache.shenyu.common.dto.SelectorData;
@@ -36,7 +37,7 @@ import java.util.Objects;
  * this is selector service.
  */
 public interface SelectorService extends PageService<SelectorQueryCondition, SelectorVO> {
-    
+
     /**
      * Register string.
      *
@@ -44,7 +45,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return the string
      */
     String registerDefault(SelectorDTO selectorDTO);
-    
+
     /**
      * handler selector need upstream check.
      *
@@ -54,7 +55,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return the id of selector.
      */
     String registerDefault(MetaDataRegisterDTO dto, String pluginName, String selectorHandler);
-    
+
     /**
      * create or update selector.
      *
@@ -68,12 +69,11 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
             selectorDTO.getSelectorConditions().forEach(selectorConditionDTO -> {
                 Assert.notBlack(selectorConditionDTO.getParamType(), "if type is custom, paramType is not empty");
                 Assert.notBlack(selectorConditionDTO.getParamName(), "if type is custom, paramName is not empty");
-                Assert.notBlack(selectorConditionDTO.getParamValue(), "if type is custom, paramValue is not empty");
             });
         }
         return StringUtils.isEmpty(selectorDTO.getId()) ? create(selectorDTO) : update(selectorDTO);
     }
-    
+
     /**
      * create  selector.
      * <ul>
@@ -87,7 +87,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return rows int
      */
     int create(SelectorDTO selectorDTO);
-    
+
     /**
      * update selector.
      *
@@ -95,7 +95,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return rows int
      */
     int update(SelectorDTO selectorDTO);
-    
+
     /**
      * update selective selector.
      *
@@ -103,7 +103,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return rows int
      */
     int updateSelective(SelectorDO selectorDO);
-    
+
     /**
      * delete selectors.
      *
@@ -111,7 +111,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return rows int
      */
     int delete(List<String> ids);
-    
+
     /**
      * find selector by id.
      *
@@ -119,15 +119,26 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return {@linkplain SelectorVO}
      */
     SelectorVO findById(String id);
-    
+
     /**
      * find selector by name.
      *
      * @param name the name
      * @return selector do
+     * @deprecated sice 2.6.0  Deprecated. By querying under this condition, multiple data are usually obtained.
+     *              Therefore, it is recommended to: {@linkplain SelectorService#findListByName(java.lang.String)}
      */
+    @Deprecated
     SelectorDO findByName(String name);
-    
+
+    /**
+     * find selector list by name.
+     *
+     * @param name name
+     * @return list
+     */
+    List<SelectorDO> findListByName(String name);
+
     /**
      * Find by name and plugin id selector do.
      *
@@ -136,7 +147,25 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return the selector do
      */
     SelectorDO findByNameAndPluginName(String name, String pluginName);
-    
+
+    /**
+     * findByNameAndPluginNameForUpdate.
+     *
+     * @param name       name
+     * @param pluginName pluginName
+     * @return SelectorDO
+     */
+    SelectorDO findByNameAndPluginNameForUpdate(String name, String pluginName);
+
+    /**
+     * Find selectorDO list by name and plugin name list.
+     *
+     * @param name        name
+     * @param pluginNames pluginNames
+     * @return selectorDO list
+     */
+    List<SelectorDO> findByNameAndPluginNames(String name, List<String> pluginNames);
+
     /**
      * Build by name selector data.
      *
@@ -144,7 +173,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return the selector data
      */
     SelectorData buildByName(String name);
-    
+
     /**
      * Build by name selector data.
      *
@@ -153,7 +182,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return the selector data
      */
     SelectorData buildByName(String name, String pluginName);
-    
+
     /**
      * find page of selector by query.
      *
@@ -161,7 +190,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return {@linkplain CommonPager}
      */
     CommonPager<SelectorVO> listByPageWithPermission(SelectorQuery selectorQuery);
-    
+
     /**
      * find page of selector by query.
      *
@@ -169,7 +198,7 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return CommonPager
      */
     CommonPager<SelectorVO> listByPage(SelectorQuery selectorQuery);
-    
+
     /**
      * Find by plugin id list.
      *
@@ -177,11 +206,34 @@ public interface SelectorService extends PageService<SelectorQueryCondition, Sel
      * @return the list
      */
     List<SelectorData> findByPluginId(String pluginId);
-    
+
     /**
      * List all list.
      *
      * @return the list
      */
     List<SelectorData> listAll();
+
+    /**
+     * List all export vo list.
+     *
+     * @return the vo list
+     */
+    List<SelectorVO> listAllData();
+
+    /**
+     * Import the plugin selector list.
+     * @param selectorList the plugin selector list
+     * @return config import result
+     */
+    ConfigImportResult importData(List<SelectorDTO> selectorList);
+
+    /**
+     * Enabled string.
+     *
+     * @param ids     the ids
+     * @param enabled the enable
+     * @return the result
+     */
+    Boolean enabled(List<String> ids, Boolean enabled);
 }

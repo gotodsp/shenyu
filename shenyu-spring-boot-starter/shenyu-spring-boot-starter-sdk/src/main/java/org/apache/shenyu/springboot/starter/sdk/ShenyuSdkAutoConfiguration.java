@@ -18,9 +18,9 @@
 package org.apache.shenyu.springboot.starter.sdk;
 
 import org.apache.shenyu.common.utils.VersionUtils;
-import org.apache.shenyu.register.instance.api.ShenyuInstanceRegisterRepository;
-import org.apache.shenyu.register.instance.api.config.RegisterConfig;
-import org.apache.shenyu.register.instance.core.ShenyuInstanceRegisterRepositoryFactory;
+import org.apache.shenyu.registry.api.ShenyuInstanceRegisterRepository;
+import org.apache.shenyu.registry.api.config.RegisterConfig;
+import org.apache.shenyu.registry.core.ShenyuInstanceRegisterRepositoryFactory;
 import org.apache.shenyu.sdk.core.client.ShenyuSdkClient;
 import org.apache.shenyu.sdk.core.client.ShenyuSdkClientFactory;
 import org.apache.shenyu.sdk.core.interceptor.ShenyuSdkRequestInterceptor;
@@ -70,7 +70,7 @@ public class ShenyuSdkAutoConfiguration {
     public Contract springMvcContract() {
         return new SpringMvcContract();
     }
-    
+
     /**
      * okHttpShenyuSdkClient.
      *
@@ -89,7 +89,7 @@ public class ShenyuSdkAutoConfiguration {
         shenyuSdkClient.init(config, requestInterceptorsProvider.getIfAvailable(), instanceRegisterRepositoryProvider.getIfAvailable());
         return shenyuSdkClient;
     }
-    
+
     /**
      * ShenYu Instance Register Repository.
      *
@@ -104,7 +104,7 @@ public class ShenyuSdkAutoConfiguration {
         }
         return ShenyuInstanceRegisterRepositoryFactory.newAndInitInstance(config);
     }
-    
+
     /**
      * shenyu config.
      *
@@ -115,7 +115,7 @@ public class ShenyuSdkAutoConfiguration {
     public RegisterConfig shenyuConfig() {
         return new RegisterConfig();
     }
-    
+
     /**
      * The type Parameter processor registry post processor.
      */

@@ -19,9 +19,12 @@ package org.apache.shenyu.admin.service.impl;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.shenyu.admin.listener.DataChangedEvent;
-import org.apache.shenyu.admin.model.vo.PluginVO;
+import org.apache.shenyu.admin.model.vo.NamespacePluginVO;
 import org.apache.shenyu.admin.service.AppAuthService;
+import org.apache.shenyu.admin.service.DiscoveryService;
+import org.apache.shenyu.admin.service.DiscoveryUpstreamService;
 import org.apache.shenyu.admin.service.MetaDataService;
+import org.apache.shenyu.admin.service.NamespacePluginService;
 import org.apache.shenyu.admin.service.PluginService;
 import org.apache.shenyu.admin.service.RuleService;
 import org.apache.shenyu.admin.service.SelectorService;
@@ -32,6 +35,8 @@ import org.apache.shenyu.common.dto.RuleData;
 import org.apache.shenyu.common.dto.SelectorData;
 import org.apache.shenyu.common.enums.ConfigGroupEnum;
 import org.apache.shenyu.common.enums.DataEventTypeEnum;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -39,11 +44,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.apache.shenyu.common.constant.AdminConstants.SYS_DEFAULT_NAMESPACE_NAMESPACE_ID;
+
 /**
  * Implementation of the {@link org.apache.shenyu.admin.service.SyncDataService}.
  */
 @Service
 public class SyncDataServiceImpl implements SyncDataService {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(SyncDataServiceImpl.class);
 
     private final AppAuthService appAuthService;
 
@@ -51,6 +60,11 @@ public class SyncDataServiceImpl implements SyncDataService {
      * The Plugin service.
      */
     private final PluginService pluginService;
+
+    /**
+     * The Plugin Namespace service.
+     */
+    private final NamespacePluginService namespacePluginService;
 
     /**
      * The Selector service.
@@ -66,26 +80,39 @@ public class SyncDataServiceImpl implements SyncDataService {
 
     private final MetaDataService metaDataService;
 
+    private final DiscoveryService discoveryService;
+
+    private final DiscoveryUpstreamService discoveryUpstreamService;
+
     public SyncDataServiceImpl(final AppAuthService appAuthService,
                                final PluginService pluginService,
+                               final NamespacePluginService namespacePluginService,
                                final SelectorService selectorService,
                                final RuleService ruleService,
                                final ApplicationEventPublisher eventPublisher,
-                               final MetaDataService metaDataService) {
+                               final MetaDataService metaDataService,
+                               final DiscoveryUpstreamService discoveryUpstreamService,
+                               final DiscoveryService discoveryService) {
         this.appAuthService = appAuthService;
         this.pluginService = pluginService;
+        this.namespacePluginService = namespacePluginService;
         this.selectorService = selectorService;
         this.ruleService = ruleService;
         this.eventPublisher = eventPublisher;
         this.metaDataService = metaDataService;
+        this.discoveryUpstreamService = discoveryUpstreamService;
+        this.discoveryService = discoveryService;
     }
 
+    //todo:[Namespace] Synchronize based on namespaceId
     @Override
     public boolean syncAll(final DataEventTypeEnum type) {
         appAuthService.syncData();
 
-        List<PluginData> pluginDataList = pluginService.listAll();
-        eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, type, pluginDataList));
+        List<PluginData> pluginDataList = namespacePluginService.listAll();
+        //todo:[Namespace] Temporarily only synchronize plugin data for the default namespace
+        List<PluginData> pluginDataListFilter = pluginDataList.stream().filter(v -> v.getNamespaceId().equals(SYS_DEFAULT_NAMESPACE_NAMESPACE_ID)).collect(Collectors.toList());
+        eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, type, pluginDataListFilter));
 
         List<SelectorData> selectorDataList = selectorService.listAll();
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.SELECTOR, type, selectorDataList));
@@ -94,15 +121,15 @@ public class SyncDataServiceImpl implements SyncDataService {
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.RULE, type, ruleDataList));
 
         metaDataService.syncData();
-
+        discoveryService.syncData();
         return true;
     }
 
     @Override
-    public boolean syncPluginData(final String pluginId) {
-        PluginVO pluginVO = pluginService.findById(pluginId);
+    public boolean syncPluginData(final String pluginId, final String namespaceId) {
+        NamespacePluginVO namespacePluginVO = namespacePluginService.findById(pluginId, namespaceId);
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, DataEventTypeEnum.UPDATE,
-                Collections.singletonList(PluginTransfer.INSTANCE.mapDataTOVO(pluginVO))));
+                Collections.singletonList(PluginTransfer.INSTANCE.mapToData(namespacePluginVO))));
 
         List<SelectorData> selectorDataList = selectorService.findByPluginId(pluginId);
 
@@ -111,6 +138,9 @@ public class SyncDataServiceImpl implements SyncDataService {
 
             List<String> selectorIdList = selectorDataList.stream().map(SelectorData::getId)
                     .collect(Collectors.toList());
+            for (String selectorId : selectorIdList) {
+                discoveryUpstreamService.refreshBySelectorId(selectorId);
+            }
             List<RuleData> allRuleDataList = ruleService.findBySelectorIdList(selectorIdList);
 
             eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.RULE, DataEventTypeEnum.REFRESH, allRuleDataList));

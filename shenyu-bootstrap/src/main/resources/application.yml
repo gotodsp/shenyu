@@ -16,6 +16,9 @@
 server:
   port: 9195
   address: 0.0.0.0
+  compression:
+    enabled: true
+    minResponseSize: 1MB # If the response data is greater than 1MB, enable compression.
 
 spring:
   main:
@@ -62,24 +65,43 @@ eureka:
 
 management:
   health:
-    defaults:
+    redis:
       enabled: false
-
+    elasticsearch:
+      enabled: false
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include:
+          - 'health'
+          - 'info'
 shenyu:
-  matchCache:
-    selector:
-      selectorEnabled: false
+  selectorMatchCache:
+    ## selector L1 cache
+    cache:
+      enabled: false
       initialCapacity: 10000 # initial capacity in cache
       maximumSize: 10000 # max size in cache
-    rule:
+    ## selector L2 cache, use trie as L2 cache
+    trie:
+      enabled: false
+      cacheSize: 128 # the number of plug-ins
+      matchMode: antPathMatch
+  ruleMatchCache:
+    ## rule L1 cache
+    cache:
+      enabled: false
       initialCapacity: 10000 # initial capacity in cache
       maximumSize: 65536 # max size in cache
-  trie:
-    enabled: true
-    childrenSize: 10000
-    pathVariableSize: 1000
-    pathRuleCacheSize: 1000
-    matchMode: antPathMatch
+    ## rule L2 cache, use trie as L2 cache
+    trie:
+      enabled: false
+      cacheSize: 1024 # the number of selectors
+      matchMode: antPathMatch
   netty:
     http:
       # set to false, user can custom the netty tcp server config.
@@ -88,7 +110,6 @@ shenyu:
       workerCount: 8
       accessLog: false
       serverSocketChannel:
-        soRcvBuf: 87380
         soBackLog: 128
         soReuseAddr: false
         connectTimeoutMillis: 10000
@@ -96,7 +117,7 @@ shenyu:
         writeBufferLowWaterMark: 32768
         writeSpinCount: 16
         autoRead: false
-        allocType: "pooled"
+        allocType: "unpooled"
         messageSizeEstimator: 8
         singleEventExecutorPerGroup: true
       socketChannel:
@@ -104,8 +125,6 @@ shenyu:
         soReuseAddr: false
         soLinger: -1
         tcpNoDelay: true
-        soRcvBuf: 87380
-        soSndBuf: 16384
         ipTos: 0
         allowHalfClosure: false
         connectTimeoutMillis: 10000
@@ -113,11 +132,24 @@ shenyu:
         writeBufferLowWaterMark: 32768
         writeSpinCount: 16
         autoRead: false
-        allocType: "pooled"
+        allocType: "unpooled"
         messageSizeEstimator: 8
         singleEventExecutorPerGroup: true
+      sni:
+        enabled: false
+        mod: k8s #manul
+        defaultK8sSecretNamespace: shenyu-ingress
+        defaultK8sSecretName: default-cert
+#        mod: manual
+#        certificates:
+#          - domain: 'localhost'
+#            keyCertChainFile: '/Users/zhukunshuai/Desktop/cert/example.com+1.pem'
+#            keyFile: '/Users/zhukunshuai/Desktop/cert/example.com+1-key.pem'
+#          - domain: 'example.com'
+#            keyCertChainFile: '/Users/zhukunshuai/Desktop/cert/example.com+1.pem'
+#            keyFile: '/Users/zhukunshuai/Desktop/cert/example.com+1-key.pem'
 #  httpclient:
-#    strategy: webClient
+#    strategy: netty # webClient
 #    connectTimeout: 45000
 #    responseTimeout: 3000
 #    readerIdleTime: 3000
@@ -133,7 +165,10 @@ shenyu:
 #      name: proxy
 #      maxConnections: 16
 #      acquireTimeout: 45000
-#      maxIdleTime: 3000
+#      maxIdleTime: 3000 # unit: ms
+#      maxLifeTime:  # unit: ms
+#      evictionInterval:  # unit: ms
+#      metrics: false
 #    proxy:
 #      host:
 #      port:
@@ -157,6 +192,10 @@ shenyu:
 #      selectCount: 1
 #      workerCount: 8
 #      daemon: true
+  duplicate-response-header:
+    strategy: RETAIN_FIRST
+    headers:
+      - Access-Control-Allow-Origin
   register:
     enabled: false
     registerType: zookeeper #etcd #consul
@@ -219,12 +258,16 @@ shenyu:
 #        namespace:
 #        accessKey:
 #        secretKey:
+#    polaris:
+#      url: 127.0.0.1:8093
+#      namespace:
+#      fileGroup:
 #    etcd:
 #      url: http://localhost:2379
 #    consul:
 #      url: http://localhost:8500
-#      waitTime: 1000
-#      watchDelay: 1000
+#      waitTime: 10000
+#      watchDelay: 10000
   exclude:
     enabled: false
     paths:
@@ -234,13 +277,15 @@ shenyu:
     paths:
       - /fallback/hystrix
       - /fallback/resilience4j
+      - /fallback/sentinel
   health:
-    enabled: false
+    enabled: true
     paths:
-      - /actuator/health
-      - /actuator/health/readiness
-      - /actuator/health/liveness
+      - /actuator
       - /health_check
+  alert:
+    enabled: false
+    admins: localhost:9095
   extPlugin:
     path:
     enabled: true
@@ -260,6 +305,8 @@ shenyu:
     interval: 5000
     printEnabled: true
     printInterval: 60000
+  springCloudCache:
+    enabled: false
   ribbon:
     serverListRefreshInterval: 10000
   metrics:
@@ -275,6 +322,8 @@ shenyu:
   local:
     enabled: false
     sha512Key: "BA3253876AED6BC22D4A6FF53D8406C6AD864195ED144AB5C87621B6C233B548BAEAE6956DF346EC8C17F5EA10F35EE3CBC514797ED7DDD3145464E2A0BAB413"
+  websocket:
+    enableProxyPing: false
 #  sharedPool:
 #    enable: true
 #    prefix: "shenyu-shared"
@@ -294,3 +343,8 @@ logging:
     org.apache.shenyu.bonuspoint: info
     org.apache.shenyu.lottery: info
     org.apache.shenyu: info
+    org.springframework.http.server.reactive: info
+    org.springframework.web.reactive: info
+    reactor.ipc.netty: info
+    reactor.netty: info
+    org.apache.shenyu.plugin.api.ShenyuPlugin: info

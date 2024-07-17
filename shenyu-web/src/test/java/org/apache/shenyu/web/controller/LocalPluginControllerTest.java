@@ -19,7 +19,9 @@ package org.apache.shenyu.web.controller;
 
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
-import org.apache.shenyu.common.config.ShenyuConfig.ShenyuTrieConfig;
+import org.apache.shenyu.common.config.ShenyuConfig;
+import org.apache.shenyu.common.config.ShenyuConfig.RuleMatchCache;
+import org.apache.shenyu.common.config.ShenyuConfig.SelectorMatchCache;
 import org.apache.shenyu.common.dto.ConditionData;
 import org.apache.shenyu.common.dto.PluginData;
 import org.apache.shenyu.common.dto.RuleData;
@@ -30,14 +32,18 @@ import org.apache.shenyu.common.enums.LoadBalanceEnum;
 import org.apache.shenyu.common.enums.OperatorEnum;
 import org.apache.shenyu.common.enums.ParamTypeEnum;
 import org.apache.shenyu.common.enums.PluginEnum;
+import org.apache.shenyu.common.enums.TrieCacheTypeEnum;
 import org.apache.shenyu.common.enums.TrieMatchModeEnum;
 import org.apache.shenyu.common.utils.GsonUtils;
 import org.apache.shenyu.common.utils.JsonUtils;
 import org.apache.shenyu.plugin.api.utils.SpringBeanUtils;
 import org.apache.shenyu.plugin.base.cache.BaseDataCache;
+import org.apache.shenyu.plugin.base.cache.CommonDiscoveryUpstreamDataSubscriber;
 import org.apache.shenyu.plugin.base.cache.CommonPluginDataSubscriber;
+import org.apache.shenyu.plugin.base.handler.DiscoveryUpstreamDataHandler;
 import org.apache.shenyu.plugin.base.handler.PluginDataHandler;
 import org.apache.shenyu.plugin.base.trie.ShenyuTrie;
+import org.apache.shenyu.sync.data.api.DiscoveryUpstreamDataSubscriber;
 import org.apache.shenyu.sync.data.api.PluginDataSubscriber;
 import org.apache.shenyu.web.controller.LocalPluginController.SelectorRuleData;
 import org.junit.jupiter.api.Assertions;
@@ -92,8 +98,10 @@ public final class LocalPluginControllerTest {
     public void setup() {
         this.mockShenyuTrieConfig();
         ArrayList<PluginDataHandler> pluginDataHandlerList = Lists.newArrayList();
-        subscriber = new CommonPluginDataSubscriber(pluginDataHandlerList, eventPublisher, new ShenyuTrieConfig());
-        mockMvc = MockMvcBuilders.standaloneSetup(new LocalPluginController(subscriber))
+        ArrayList<DiscoveryUpstreamDataHandler> discoveryUpstreamDataHandlers = Lists.newArrayList();
+        subscriber = new CommonPluginDataSubscriber(pluginDataHandlerList, eventPublisher, new SelectorMatchCache(), new RuleMatchCache());
+        DiscoveryUpstreamDataSubscriber discoveryUpstreamDataSubscriber = new CommonDiscoveryUpstreamDataSubscriber(discoveryUpstreamDataHandlers);
+        mockMvc = MockMvcBuilders.standaloneSetup(new LocalPluginController(subscriber, discoveryUpstreamDataSubscriber))
                 .build();
         baseDataCache = BaseDataCache.getInstance();
     }
@@ -398,7 +406,7 @@ public final class LocalPluginControllerTest {
         final LocalPluginController.SelectorRulesData selectorRulesData = new LocalPluginController.SelectorRulesData();
         selectorRulesData.setPluginName("pluginName");
         selectorRulesData.setSelectorName("selectorName");
-        selectorRulesData.setSelectorHandler("{}");
+        selectorRulesData.setSelectorHandler("[]");
         selectorRulesData.setMatchMode(0);
         LocalPluginController.RuleLocalData ruleLocalData = new LocalPluginController.RuleLocalData();
         ruleLocalData.setRuleName("ruleName");
@@ -492,7 +500,9 @@ public final class LocalPluginControllerTest {
 
     private void mockShenyuTrieConfig() {
         ConfigurableApplicationContext context = mock(ConfigurableApplicationContext.class);
-        when(context.getBean(ShenyuTrie.class)).thenReturn(new ShenyuTrie(100L, 100L, 100L, TrieMatchModeEnum.ANT_PATH_MATCH.getMatchMode()));
+        when(context.getBean(ShenyuConfig.class)).thenReturn(new ShenyuConfig());
+        when(context.getBean(TrieCacheTypeEnum.RULE.getTrieType())).thenReturn(new ShenyuTrie(100L, TrieMatchModeEnum.ANT_PATH_MATCH.getMatchMode()));
+        when(context.getBean(TrieCacheTypeEnum.SELECTOR.getTrieType())).thenReturn(new ShenyuTrie(100L, TrieMatchModeEnum.ANT_PATH_MATCH.getMatchMode()));
         SpringBeanUtils.getInstance().setApplicationContext(context);
     }
 }
