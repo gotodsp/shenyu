@@ -27,7 +27,7 @@
     <property name="ASYNC_DISCARDING_THRESHOLD" value="${log.async.discarding-threshold:-0}"/>
     <property name="ASYNC_LOG_QUEUE_SIZE" value="${log.async.queue-size:-512}"/>
 
-    <property name="LOG_PATTERN" value="%red(%d{yyyy-MM-dd HH:mm:ss}) %green([%thread]) %highlight(%-5level) %boldMagenta(%logger) - %cyan(%msg%n)"/>
+    <property name="LOG_PATTERN" value="%red(%d{yyyy-MM-dd HH:mm:ss.SSS}) %green([%thread]) %highlight(%-5level) %boldMagenta(%logger) - %cyan(%msg%n)"/>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
