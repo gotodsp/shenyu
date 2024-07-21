@@ -109,10 +109,13 @@ public class SyncDataServiceImpl implements SyncDataService {
     public boolean syncAll(final DataEventTypeEnum type) {
         appAuthService.syncData();
 
-        List<PluginData> pluginDataList = namespacePluginService.listAll();
-        //todo:[Namespace] Temporarily only synchronize plugin data for the default namespace
-        List<PluginData> pluginDataListFilter = pluginDataList.stream().filter(v -> v.getNamespaceId().equals(SYS_DEFAULT_NAMESPACE_NAMESPACE_ID)).collect(Collectors.toList());
-        eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, type, pluginDataListFilter));
+//        List<PluginData> pluginDataList = namespacePluginService.listAll();
+//        //todo:[Namespace] Temporarily only synchronize plugin data for the default namespace
+//        List<PluginData> pluginDataListFilter = pluginDataList.stream().filter(v -> v.getNamespaceId().equals(SYS_DEFAULT_NAMESPACE_NAMESPACE_ID)).collect(Collectors.toList());
+//        eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, type, pluginDataListFilter));
+
+        List<PluginData> pluginDataList = pluginService.listAll();
+        eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, type, pluginDataList));
 
         List<SelectorData> selectorDataList = selectorService.listAll();
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.SELECTOR, type, selectorDataList));
