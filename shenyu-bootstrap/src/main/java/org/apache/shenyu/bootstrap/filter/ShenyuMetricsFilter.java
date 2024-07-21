@@ -26,12 +26,11 @@ public class ShenyuMetricsFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        log.info("收到请求");
         return chain.filter(exchange).transformDeferred((call) -> filter(exchange, call));
     }
 
     private Publisher<Void> filter(ServerWebExchange exchange, Mono<Void> call) {
-        log.info("=== 收到请求");
+        log.info("====== receive client request: uri={}", exchange.getRequest().getPath());
         long start = System.currentTimeMillis();
         return call.doOnEach((signal) -> onTerminalSignal(exchange, signal.getThrowable(), start))
                 .doOnCancel(() -> onTerminalSignal(exchange, new CancelledServerWebExchangeException(), start));
@@ -54,9 +53,9 @@ public class ShenyuMetricsFilter implements WebFilter {
             cause = (cause != null) ? cause : exchange.getAttribute(ErrorAttributes.ERROR_ATTRIBUTE);
             // TODO 耗时 = WebFilter链耗时 + shenyu插件耗时 + 后端服务处理及网络往返耗时
             long duration = System.currentTimeMillis() - start;
-            log.info("=== 结束请求,耗时={}ms", duration, cause);
+            log.info("====== return client response: uri={}, total cost={}ms", exchange.getRequest().getPath(), duration, cause);
         } catch (Exception ex) {
-            log.warn("Failed to record timer metrics", ex);
+            log.warn("====== Failed to record timer metrics: uri={}", exchange.getRequest().getPath(), ex);
             // Allow exchange to continue, unaffected by metrics problem
         }
     }

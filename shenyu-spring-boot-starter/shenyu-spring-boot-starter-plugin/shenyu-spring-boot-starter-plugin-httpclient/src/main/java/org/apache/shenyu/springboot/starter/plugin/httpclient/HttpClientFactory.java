@@ -26,6 +26,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.plugin.httpclient.config.HttpClientProperties;
 import org.apache.shenyu.plugin.httpclient.config.HttpClientProperties.Pool;
+import org.apache.shenyu.plugin.httpclient.metrics.ShenyuHttpClientHttpClientMetricsRecorder;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
@@ -139,7 +140,8 @@ public class HttpClientFactory extends AbstractFactoryBean<HttpClient> {
         }
         // set to false, fix java.io.IOException: Connection reset by peer
         // see https://github.com/reactor/reactor-netty/issues/388
-        return httpClient.keepAlive(properties.isKeepAlive());
+        return httpClient.keepAlive(properties.isKeepAlive())
+                .metrics(true, ShenyuHttpClientHttpClientMetricsRecorder::new);
     }
 
     private ConnectionProvider buildConnectionProvider(final HttpClientProperties.Pool pool) {
